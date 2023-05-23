@@ -80,7 +80,36 @@ GC 설계자들은 두가지 가설을 전제로 GC를 만들었다고 한다.
 그래서 영 제너레이션과 올드 제너레이션을 나누어놓고 힙 전체에서 GC를 진행하지 않고 
 영 제너레이션 에서만 GC를 수행(minor GC)한다. 여기서 대부분의 garbage가 수거되기 때문에, 메모리 낭비를 막을 수 있다.
 
+  <h2>Example(CG 효율을 높이는 코딩방법)</h2><Br>
+ <p>[ 1. Collection의 크기를 예측하여 설정하라 ]</p>
+모든 Java의 Collections와 그를 확장하여 구현한 구현체들(Trove나 Google의 Guava)은 내부적으로 배열을 사용한다. <br>
+  배열의 크기는 불변의 값이라 초기에 할당 되면 수정이 불가능하다.<br>
+  그렇기 때문에 처음에 설정한 크기를 초과하여 계속 item을 담으려고 하면 내부적으로 새로운 크기의 배열을 생성하고 item을 복사하게 된다.<br>
+  그렇다면 기존의 배열은 어떻게 되는가? 더 이상 사용되지 않는 메모리 즉 가비지가 된다.<br>
+물론 대부분의 Collection은 이러한 재할당(Re-Allocation) 과정을 최적화하려고 노력하고 있지만 가비지가 생기는 것은 불가피하다. <br>
+  그렇기 때문에 가능하다면 Collection의 크기를 예측하여, 생성 시에 직접 설정해주도록 하자<br>
+<code>
+  // 크기를 예측하여 직접 설정하라 
+  List<String> list = new ArrayList(5);
+ </code>
+  
+<p>[ 2. Stream을 사용하라 ]</p>
+파일로부터 데이터를 읽거나 네트워크를 통해 파일을 받는 경우, 다음과 같은 코드를 쉽게 접할 수 있다.
+<code>
+byte[] fileData = readFileToByteArray(new File("myfile.txt"));
+  </code>
+  
+읽으려는 데이터의 크기가 작다면 상관이 없겠지만, 데이터의 크기가 크거나 예측할 수 없다면 그렇게 좋지 못한 방법이다. <br>
+  왜냐하면 데이터의 크기가 너무 크다면 JVM이 해당 파일의 내용을 할당할 수 없어 OutOfMemoryErrors가 발생할 수 있으며, 할당이 되었다 하더라도 이후에 상당히 큰 규모의 가비지가 되기 때문이다. <br>
+  이러한 문제를 예방하는 가장 좋은 방법은 InputStream을 직접 사용하는 것이다.<br>
 
+InputStream은 내부적으로 Buffer를 두고 있어 일정한 크기(Chunk)만큼씩 데이터를 조회한다. <br>
+  그렇기 때문에 InputStream을 사용하면 Buffer를 재사용함으로써 OutOfMemoryErrors를 방지할 수 있고, 가비지의 생성을 최소화할 수 있다. <br>
+  실제로 대부분의 Major한 도구들은 Stream을 직접 받아 처리하도록 되어 있다.<br>
+  <code>
+  FileInputStream fis = new FileInputStream("myfile.txt");
+MyProtoBufMessage msg = MyProtoBufMessage.parseFrom(fis);
+    </code
 <h3>출처</h3>
 https://ko.wikipedia.org/wiki/%EC%93%B0%EB%A0%88%EA%B8%B0_%EC%88%98%EC%A7%91_(%EC%BB%B4%ED%93%A8%ED%84%B0_%EA%B3%BC%ED%95%99)
 https://spurdev.tistory.com/10
