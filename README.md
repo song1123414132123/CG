@@ -109,7 +109,42 @@ InputStream은 내부적으로 Buffer를 두고 있어 일정한 크기(Chunk)�
   <code>
   FileInputStream fis = new FileInputStream("myfile.txt");
 MyProtoBufMessage msg = MyProtoBufMessage.parseFrom(fis);
-    </code
+  </code>
+  
+  <p> [ 3. String의 사용을 최적화하라 ]</p>
+String은 거의 모든 자료구조에서 빼놓을 수 없는 부분이다. <br>
+   그렇기에 String은 다른 값들보다 중요한 만큼 메모리에 더 큰 영향을 미친다. <br>
+   그렇기 때문에 String을 다루는 것 역시 신경을 써야 한다.<br>
+
+<p>1. 중복된 String이 생성되는 경우, JVM 옵션을 활용하라</p>
+애플리케이션을 개발하다보면 동일한 String 문자열을 많이 생성하게 된다.<br>
+  Java 8u20 업데이트부터는 동일한 문자열에 의해 불필요한 메모리를 사용을 줄이도록 새로운 JVM 파라미터(UseStringDeduplication)를 추가하였다. <br>
+  해당 옵션을 사용하면 중복되는 String 인스턴스들을 Global Single Char[]로 관리하여 힙 메모리의 사용을 최적화할 수 있다.<br>
+<code>
+java -XX:+UseStringDeduplication -jar Application.java
+  </code>
+  
+  <p> [ 4. 불변성(Immutability)을 활용하라 ]</p>
+불변성(Immutability)을 활용하는 것은 많은 이점을 가져다주는데, 그 중에서 많은 사람들이 놓치는 것이 바로 GC의 성능을 높여준다는 것이다. <br>
+  불변의 객체는 한번 생성된 이후에 수정이 불가능한 객체로, Java에서는 final 키워드를 사용하여 불변의 객체를 생성할 수 있다. <br>
+  이렇게 객체를 생성하기 위해서는 객체를 가지는 컨테이너도 존재한다는 것인데, 당연히 불변의 객체가 먼저 생성되어야 컨테이너가 이 객체를 참조할 수 있을 것이다. <br>
+  즉, 컨테이너는 컨테이너가 참조하는 가장 젊은 객체들보다 더 젊다는 것(늦게 생성되었다는 것)이다. <br>
+  이러한 점은 GC가 수행될 때, 가비지 컬렉터가 컨테이너 하위의 불변 객체들은 Skip할 수 있도록 도와준다.<br>
+  왜냐하면 해당 컨테이너가 살아있다는 것은 하위의 불변 객체들 역시 처음에 할당된 그 상태로 참조되고 있다는 것을 의미하기 때문이다.<br>
+  <code>
+    public class MutableHolder {
+    private Object value;
+    public Object getValue() { return value; }
+    public void setValue(Object o) { value = o; }
+}
+
+public class ImmutableHolder {
+    private final Object value;
+    public ImmutableHolder(Object o) { value = o; }
+    public Object getValue() { return value; }
+}
+  </code>
+  
 <h3>출처</h3>
 https://ko.wikipedia.org/wiki/%EC%93%B0%EB%A0%88%EA%B8%B0_%EC%88%98%EC%A7%91_(%EC%BB%B4%ED%93%A8%ED%84%B0_%EA%B3%BC%ED%95%99)
 https://spurdev.tistory.com/10
